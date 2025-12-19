@@ -70,5 +70,4 @@ stages:
         - task: ManualValidation@1
           inputs:
             notifyUsers: 'Saurabh kumar'
-            approvers: 'Saurabh kumar'
             instructions: 'for your approval'
