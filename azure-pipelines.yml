@@ -59,3 +59,15 @@ stages:
             command: 'plan'
             workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
             environmentServiceNameAzureRM: 'slc'
+
+  - stage: Manualvalidation
+    displayName: Manualvalidation
+    pool: server
+    jobs:
+      - job: Manualvalidation
+        displayName: Manualvalidation
+        steps:
+        - task: ManualValidation@1
+          inputs:
+            notifyUsers: 'Saurabh kumar'
+            approvers: 'Saurabh kumar'
