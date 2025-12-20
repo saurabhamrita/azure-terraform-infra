@@ -88,10 +88,10 @@ stages:
             backendAzureRmContainerName: 'backendcontainer17'
             backendAzureRmKey: 'dev1.tfstate'
         - task: TerraformTask@5
-          displayName: Apply
+          displayName: Terraform Apply
           inputs:
             provider: 'azurerm'
-            command: 'Apply'
+            command: 'apply'
             workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
             commandOptions: '-auto-approve'
             environmentServiceNameAzureRM: 'slc'
