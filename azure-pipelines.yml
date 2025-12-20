@@ -83,7 +83,6 @@ stages:
             provider: 'azurerm'
             command: 'init'
             workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
-            backendAzureRmUseEntraIdForAuthentication: false
             backendServiceArm: 'slc'
             backendAzureRmStorageAccountName: 'backendstg178'
             backendAzureRmContainerName: 'backendcontainer17'
