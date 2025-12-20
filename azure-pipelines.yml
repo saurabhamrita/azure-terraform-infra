@@ -92,6 +92,7 @@ stages:
           displayName: Apply
           inputs:
             provider: 'azurerm'
-            command: 'apply'
+            command: 'Apply'
             workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
+            commandOptions: '-auto-approve'
             environmentServiceNameAzureRM: 'slc'
