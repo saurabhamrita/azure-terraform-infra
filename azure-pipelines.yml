@@ -4,40 +4,125 @@ trigger:
 pool: Saliyan
 
 stages:
-  - stage: Terraforminit
-    jobs:
-      - job: terraforminit
-        displayName: terraforminit
-        steps:
-        - task: TerraformInstaller@1
-          inputs:
-            terraformVersion: 'latest'
+# ===================== TERRAFORM INIT =====================
+- stage: Terraforminit
+  jobs:
+  - job: terraforminit
+    displayName: terraform init
+    steps:
+    - checkout: self
 
-        - task: TerraformTask@5
-          inputs:
-            provider: 'azurerm'
-            command: 'init'
-            workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
-            backendAzureRmUseEntraIdForAuthentication: false
-            backendServiceArm: 'slc'
-            backendAzureRmStorageAccountName: 'backendstg178'
-            backendAzureRmContainerName: 'backendcontainer17'
-            backendAzureRmKey: 'dev1.tfstate'
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: 'latest'
 
-  - stage: Securityscan
-    jobs:
-      - job: Securityscan
-        displayName: Securityscan
-        steps:
-        - task: PowerShell@2
-          inputs:
-            targetType: 'inline'
-            script: |
-              tflint --init
-              tflint
-            workingDirectory: '$(System.DefaultWorkingDirectory)'
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
+        backendServiceArm: 'slc'
+        backendAzureRmStorageAccountName: 'backendstg178'
+        backendAzureRmContainerName: 'backendcontainer17'
+        backendAzureRmKey: 'dev1.tfstate'
 
-        - task: tfsec@1
-          inputs:
-            version: 'v1.26.0'
-            dir: '$(System.DefaultWorkingDirectory)'
+# ===================== SECURITY SCAN =====================
+- stage: Securityscan
+  displayName: Security Scan (tflint + tfsec)
+  jobs:
+  - job: Securityscan
+    steps:
+    - checkout: self
+
+    # ---- TFLINT ----
+    - task: PowerShell@2
+      displayName: Run tflint
+      inputs:
+        targetType: 'inline'
+        workingDirectory: '$(System.DefaultWorkingDirectory)'
+        script: |
+          tflint --init
+          tflint
+
+    # ---- TFSEC ----
+    - task: CmdLine@2
+      displayName: Run tfsec scan
+      inputs:
+        script: |
+          tfsec "$(System.DefaultWorkingDirectory)/Environment/Dev" ^
+            --format junit ^
+            --out "$(System.DefaultWorkingDirectory)/Environment/Dev/tfsec-results.junit"
+      continueOnError: true   # ❗ scan fail ho tab bhi pipeline chale
+
+    # ---- Publish tfsec results ----
+    - task: PublishTestResults@2
+      displayName: Publish tfsec results
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: 'tfsec-results.junit'
+        searchFolder: '$(System.DefaultWorkingDirectory)/Environment/Dev'
+        failTaskOnFailedTests: false
+
+# ===================== TERRAFORM PLAN =====================
+- stage: Terraformplan
+  displayName: Terraform Plan
+  jobs:
+  - job: terraformplan
+    steps:
+    - checkout: self
+
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
+        backendServiceArm: 'slc'
+        backendAzureRmStorageAccountName: 'backendstg178'
+        backendAzureRmContainerName: 'backendcontainer17'
+        backendAzureRmKey: 'dev1.tfstate'
+
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
+        environmentServiceNameAzureRM: 'slc'
+
+# ===================== MANUAL VALIDATION =====================
+- stage: Manualvalidation
+  displayName: Manual Validation
+  pool: server
+  jobs:
+  - job: Manualvalidation
+    steps:
+    - task: ManualValidation@1
+      inputs:
+        notifyUsers: 'Saurabh kumar'
+        instructions: 'for your approval'
+
+# ===================== APPLY =====================
+- stage: Apply
+  displayName: Terraform Apply
+  jobs:
+  - job: Apply
+    steps:
+    - checkout: self
+
+    - task: TerraformTask@5
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
+        backendServiceArm: 'slc'
+        backendAzureRmStorageAccountName: 'backendstg178'
+        backendAzureRmContainerName: 'backendcontainer17'
+        backendAzureRmKey: 'dev1.tfstate'
+
+    - task: TerraformTask@5
+      displayName: Terraform Apply
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/Environment/Dev'
+        commandOptions: '-auto-approve'
+        environmentServiceNameAzureRM: 'slc'
